@@ -76,11 +76,23 @@ variables:
   # Entities, Devices oder Areas enthalten; expand() liefert die tatsächlichen
   # Entity-Objekte, aus denen wir die IDs ziehen.
   light_target: !input light_target
+  # entity_id / device_id / area_id im Target koennen jeweils ein einzelner
+  # String ODER eine Liste sein. Deshalb jeden Teil zuerst zu einer Liste
+  # normalisieren (String -> [String]), bevor sie zusammengefuehrt werden.
+  _entity_ids: >-
+    {% set v = light_target.entity_id | default([]) %}
+    {{ [v] if v is string else v }}
+  _device_ids: >-
+    {% set v = light_target.device_id | default([]) %}
+    {{ [v] if v is string else v }}
+  _area_ids: >-
+    {% set v = light_target.area_id | default([]) %}
+    {{ [v] if v is string else v }}
   target_light_entities: >-
     {{ expand(
-         (light_target.entity_id | default([]))
-         + (light_target.device_id | default([]) | map('device_entities') | sum(start=[]))
-         + (light_target.area_id | default([]) | map('area_entities') | sum(start=[]))
+         _entity_ids
+         + (_device_ids | map('device_entities') | sum(start=[]))
+         + (_area_ids | map('area_entities') | sum(start=[]))
        )
        | selectattr('domain', 'eq', 'light')
        | map(attribute='entity_id')
